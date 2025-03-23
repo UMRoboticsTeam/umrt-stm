@@ -22,6 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
+#include "UMRT/CAN.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,9 +62,12 @@ static void MX_CAN1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/**
- * @brief Redirects printf calls to UART through the USB interface.
- */
+// CAN headers
+CAN_TxHeaderTypeDef CAN1_Tx = {0};
+uint8_t CAN1_TxData[8];
+bool CAN1_TxPending;
+uint32_t thingy;
+
 int __io_putchar(int ch) {
   HAL_StatusTypeDef result = HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 10);
   if (result != HAL_OK) {
@@ -72,6 +77,7 @@ int __io_putchar(int ch) {
   return ch;
 }
 
+uint32_t thingy = 0xFFFFFFFF;
 /* USER CODE END 0 */
 
 /**
@@ -106,16 +112,26 @@ int main(void)
   MX_USART2_UART_Init();
   MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
-  printf("Debug interface working!\r\n");
+  printf("Debug interface working! baud=%lu\r\n", (uint32_t)huart2.Init.BaudRate);
+  CAN_Setup(&hcan1);
+
+  printf("starting\r\n");
+  HAL_CAN_Start(&hcan1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  int i = 0;
+  uint8_t i = 0;
+  uint32_t mailbox_id;
   while (1)
   {
-	  HAL_Delay(100);
-	  printf("This is printf!! %d\r\n", i++);
+	  printf("This is printf!! 0x%08lX\r\n", thingy);
+	  CAN1_Tx.DLC = 1;
+	  CAN1_TxData[0] = i;
+	  HAL_CAN_AddTxMessage(&hcan1, &CAN1_Tx, CAN1_TxData, &mailbox_id);
+	  HAL_Delay(10000);
+	  i++;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -173,7 +189,6 @@ static void MX_CAN1_Init(void)
 {
 
   /* USER CODE BEGIN CAN1_Init 0 */
-
   /* USER CODE END CAN1_Init 0 */
 
   /* USER CODE BEGIN CAN1_Init 1 */
@@ -181,7 +196,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 8;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.Mode = CAN_MODE_LOOPBACK;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_2TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
@@ -197,6 +212,13 @@ static void MX_CAN1_Init(void)
   }
   /* USER CODE BEGIN CAN1_Init 2 */
 
+  // Initialize the Tx Header(s)
+  CAN1_Tx.DLC = 0;
+  CAN1_Tx.IDE = CAN_ID_STD; // use 11 bit ids
+  CAN1_Tx.RTR = CAN_RTR_DATA; // not a data request
+  CAN1_Tx.StdId = 0;
+  CAN1_Tx.ExtId = 0;
+  CAN1_Tx.TransmitGlobalTime = DISABLE;
   /* USER CODE END CAN1_Init 2 */
 
 }
@@ -242,8 +264,8 @@ static void MX_USART2_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -258,8 +280,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
