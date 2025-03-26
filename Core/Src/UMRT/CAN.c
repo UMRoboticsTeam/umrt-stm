@@ -12,6 +12,7 @@
 #include "UMRT/CAN.h"
 #include <stdio.h>
 
+// Define all CAN callbacks for interrupts:
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan) {
 	printf("\r\n==== CAN ERROR INTERRUPT %08X\r\n", hcan->ErrorCode);
 	if ((hcan->ErrorCode&HAL_CAN_ERROR_EWG)==HAL_CAN_ERROR_EWG) printf("  -> has bit: Protocol Error Warning (HAL_CAN_ERROR_EWG)\r\n");
@@ -40,16 +41,11 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan) {
 	printf("====\r\n");
 }
 
-void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox0CompleteCallback\r\n"); }
-void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox1CompleteCallback\r\n"); }
-void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox2CompleteCallback\r\n"); }
-void HAL_CAN_TxMailbox0AbortCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox0AbortCallback\r\n"); }
-void HAL_CAN_TxMailbox1AbortCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox1AbortCallback\r\n"); }
-void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox2AbortCallback\r\n"); }
 
-//
+// receive headers and data: array in case we have 2 FIFO (first in; first out) queues.
 CAN_RxHeaderTypeDef rxheader[1];
 uint8_t rxdata[1][8];
+
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 	printf("HAL_CAN_RxFifo0MsgPendingCallback\r\n");
@@ -70,11 +66,18 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 	printf("  -> DATA[6] %lu\r\n", rxdata[0][6]);
 	printf("  -> DATA[7] %lu\r\n", rxdata[0][7]);
 }
+
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_RxFifo0FullCallback\r\n"); }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_RxFifo1MsgPendingCallback\r\n"); }
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_RxFifo1FullCallback\r\n"); }
 void HAL_CAN_SleepCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_SleepCallback\r\n"); }
 void HAL_CAN_WakeUpFromRxMsgCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_WakeUpFromRxMsgCallback\r\n"); }
+void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox0CompleteCallback\r\n"); }
+void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox1CompleteCallback\r\n"); }
+void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox2CompleteCallback\r\n"); }
+void HAL_CAN_TxMailbox0AbortCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox0AbortCallback\r\n"); }
+void HAL_CAN_TxMailbox1AbortCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox1AbortCallback\r\n"); }
+void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_TxMailbox2AbortCallback\r\n"); }
 
 
 void CAN_ActivateNotification(CAN_HandleTypeDef* hcan, uint32_t id, const char* name) {
@@ -82,7 +85,7 @@ void CAN_ActivateNotification(CAN_HandleTypeDef* hcan, uint32_t id, const char* 
 	if (result == HAL_OK) {
 		printf("Activated notification for '%s'!\r\n", name);
 	} else {
-		printf("ERROR: Could not register CAN callback '%s' (result:%i;error:%08lX)\r\n", name, result, hcan->ErrorCode);
+		printf("ERROR: Could not register CAN callback '%s' (result: %i; error: %08lX)\r\n", name, result, hcan->ErrorCode);
 	}
 }
 
@@ -112,11 +115,12 @@ void CAN_Setup(CAN_HandleTypeDef* hcan) {
 	canfilterconfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
 	canfilterconfig.FilterIdHigh = 0;
 	canfilterconfig.FilterIdLow = 0;
+	// since the mask = 0, all packets are received
 	canfilterconfig.FilterMaskIdHigh = 0;
 	canfilterconfig.FilterMaskIdLow = 0;
 	canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
 	canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
-	canfilterconfig.SlaveStartFilterBank = 20;  // how many filters to assign to the CAN1 (master can)
+	canfilterconfig.SlaveStartFilterBank = 27;  // how many filters to assign to the CAN1 (master can)
 
 	HAL_CAN_ConfigFilter(hcan, &canfilterconfig);
 }

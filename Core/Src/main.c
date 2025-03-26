@@ -65,9 +65,18 @@ static void MX_CAN1_Init(void);
 // CAN headers
 CAN_TxHeaderTypeDef CAN1_Tx = {0};
 uint8_t CAN1_TxData[8];
-bool CAN1_TxPending;
-uint32_t thingy;
 
+/**
+ * Redirects printf to the UART console.
+ *
+ * it 'just works' but to read the messages:
+ * 		on linux: $ minicom -b 115200 /dev/ttyACM0
+ * 		on others: PuTTY might work, but Arduino IDE's serial monitor works perfectly too.
+ *
+ * Note that this is very slow and should be removed for '''production'''.
+ * And add the line: #define printf(...) ;
+ * and build with optimizations.
+ */
 int __io_putchar(int ch) {
   HAL_StatusTypeDef result = HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 10);
   if (result != HAL_OK) {
@@ -126,7 +135,7 @@ int main(void)
   uint32_t mailbox_id;
   while (1)
   {
-	  printf("This is printf!! 0x%08lX\r\n", thingy);
+	  printf("This is printf!! 0x%08lX\r\n", i);
 	  CAN1_Tx.DLC = 1;
 	  CAN1_TxData[0] = i;
 	  HAL_CAN_AddTxMessage(&hcan1, &CAN1_Tx, CAN1_TxData, &mailbox_id);
