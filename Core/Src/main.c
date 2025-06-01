@@ -23,6 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_can.h"
 #include "UMRT/CAN.h"
 /* USER CODE END Includes */
 
@@ -33,7 +35,16 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+void CAN_MsgReceived(CAN_HandleTypeDef *hcan, CAN_RxHeaderTypeDef *rxheader, uint8_t *rxdata) {
+	if (rxheader->StdId == 0x123) {
+		for (int i = 0; i < rxdata[0]; i++) {
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			HAL_Delay(200);
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			HAL_Delay(300);
+		}
+	}
+}
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -86,7 +97,22 @@ int __io_putchar(int ch) {
   return ch;
 }
 
-uint32_t thingy = 0xFFFFFFFF;
+void HAL_GPIO_EXTI_Callback(uint16_t Pin) {
+	printf("BUTTON PRESSED\r\n");
+	CAN1_Tx.ExtId = 0;
+	CAN1_Tx.IDE = CAN_ID_EXT;
+	CAN1_Tx.RTR = CAN_RTR_DATA;
+	CAN1_Tx.TransmitGlobalTime = DISABLE;
+
+	CAN1_Tx.DLC = 1;
+	CAN1_Tx.StdId = 123;
+	CAN1_TxData[0]++;
+	uint32_t mb;
+	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &CAN1_Tx, CAN1_TxData, &mb);
+
+	if (status != HAL_OK) printf("Status: %u\r\n", status);
+	if (status == HAL_ERROR) HAL_CAN_ErrorCallback(&hcan1);
+}
 /* USER CODE END 0 */
 
 /**
@@ -124,23 +150,23 @@ int main(void)
   printf("Debug interface working! baud=%lu\r\n", (uint32_t)huart2.Init.BaudRate);
   CAN_Setup(&hcan1);
 
-  printf("starting\r\n");
-  HAL_CAN_Start(&hcan1);
-
+  printf("starting...");
+  HAL_StatusTypeDef status = HAL_CAN_Start(&hcan1);
+  if (status == HAL_OK) printf("success!\r\n");
+  else {
+	  printf("failed! :( status == %u\r\n", status);
+  	  if (status == HAL_ERROR) HAL_CAN_ErrorCallback(&hcan1);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
   uint8_t i = 0;
   uint32_t mailbox_id;
   while (1)
   {
-	  printf("This is printf!! 0x%08lX\r\n", i);
-	  CAN1_Tx.DLC = 1;
-	  CAN1_TxData[0] = i;
-	  HAL_CAN_AddTxMessage(&hcan1, &CAN1_Tx, CAN1_TxData, &mailbox_id);
-	  HAL_Delay(10000);
-	  i++;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -205,7 +231,7 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 8;
-  hcan1.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_2TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
@@ -221,13 +247,6 @@ static void MX_CAN1_Init(void)
   }
   /* USER CODE BEGIN CAN1_Init 2 */
 
-  // Initialize the Tx Header(s)
-  CAN1_Tx.DLC = 0;
-  CAN1_Tx.IDE = CAN_ID_STD; // use 11 bit ids
-  CAN1_Tx.RTR = CAN_RTR_DATA; // not a data request
-  CAN1_Tx.StdId = 0;
-  CAN1_Tx.ExtId = 0;
-  CAN1_Tx.TransmitGlobalTime = DISABLE;
   /* USER CODE END CAN1_Init 2 */
 
 }
@@ -277,17 +296,28 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  /*Configure GPIO pin : BUTTON_Pin */
+  GPIO_InitStruct.Pin = BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(BUTTON_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* USER CODE END MX_GPIO_Init_2 */

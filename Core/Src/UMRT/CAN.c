@@ -12,6 +12,14 @@
 #include "UMRT/CAN.h"
 #include <stdio.h>
 
+/**
+ * This function must be defined elsewhere.
+ * It will only be called in the case that there is no error.
+ *
+ * References are NOT guaranteed to exist after the call the CAN_Msg_Received ends.
+ */
+void CAN_MsgReceived(CAN_HandleTypeDef *hcan, CAN_RxHeaderTypeDef *rxheader, uint8_t *rxdata);
+
 // Define all CAN callbacks for interrupts:
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan) {
 	printf("\r\n==== CAN ERROR INTERRUPT %08X\r\n", hcan->ErrorCode);
@@ -46,6 +54,7 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan) {
 CAN_RxHeaderTypeDef rxheader[1];
 uint8_t rxdata[1][8];
 
+HAL_StatusTypeDef CAN_Transmit(CAN_HandleTypeDef *hcan, const CAN_TxHeaderTypeDef *pHeader, const uint8_t aData[], uint32_t *pTxMailbox);
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 	printf("HAL_CAN_RxFifo0MsgPendingCallback\r\n");
@@ -57,14 +66,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 
 	printf("  -> ID %lu\r\n", rxheader[0].StdId);
 	printf("  -> LENGTH %lu\r\n", rxheader[0].DLC);
-	printf("  -> DATA[0] %lu\r\n", rxdata[0][0]);
-	printf("  -> DATA[1] %lu\r\n", rxdata[0][1]);
-	printf("  -> DATA[2] %lu\r\n", rxdata[0][2]);
-	printf("  -> DATA[3] %lu\r\n", rxdata[0][3]);
-	printf("  -> DATA[4] %lu\r\n", rxdata[0][4]);
-	printf("  -> DATA[5] %lu\r\n", rxdata[0][5]);
-	printf("  -> DATA[6] %lu\r\n", rxdata[0][6]);
-	printf("  -> DATA[7] %lu\r\n", rxdata[0][7]);
+	printf("  -> DATA[0] %u\r\n", rxdata[0][0]);
+	printf("  -> DATA[1] %u\r\n", rxdata[0][1]);
+	printf("  -> DATA[2] %u\r\n", rxdata[0][2]);
+	printf("  -> DATA[3] %u\r\n", rxdata[0][3]);
+	printf("  -> DATA[4] %u\r\n", rxdata[0][4]);
+	printf("  -> DATA[5] %u\r\n", rxdata[0][5]);
+	printf("  -> DATA[6] %u\r\n", rxdata[0][6]);
+	printf("  -> DATA[7] %u\r\n", rxdata[0][7]);
+
+	CAN_MsgReceived(hcan, &rxheader[0], rxdata[0]);
 }
 
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* hcan) { printf("HAL_CAN_RxFifo0FullCallback\r\n"); }
@@ -91,6 +102,8 @@ void CAN_ActivateNotification(CAN_HandleTypeDef* hcan, uint32_t id, const char* 
 
 void CAN_Setup(CAN_HandleTypeDef* hcan) {
 	// Activate all notifications
+	CAN_ActivateNotification(hcan, CAN_IT_ERROR, "ERROR");
+	CAN_ActivateNotification(hcan, CAN_IT_LAST_ERROR_CODE, "LAST_ERROR_CODE");
 	CAN_ActivateNotification(hcan, CAN_IT_TX_MAILBOX_EMPTY, "TX_MAILBOX_EMPTY");
 	CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING, "RX_FIFO0_MSG_PENDING");
 	CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_FULL, "RX_FIFO0_FULL");
@@ -103,8 +116,7 @@ void CAN_Setup(CAN_HandleTypeDef* hcan) {
 	CAN_ActivateNotification(hcan, CAN_IT_ERROR_WARNING, "ERROR_WARNING");
 	CAN_ActivateNotification(hcan, CAN_IT_ERROR_PASSIVE, "ERROR_PASSIVE");
 	CAN_ActivateNotification(hcan, CAN_IT_BUSOFF, "BUSOFF");
-	CAN_ActivateNotification(hcan, CAN_IT_LAST_ERROR_CODE, "LAST_ERROR_CODE");
-	CAN_ActivateNotification(hcan, CAN_IT_ERROR, "ERROR");
+
 
 	// Setup packet filtering
 
