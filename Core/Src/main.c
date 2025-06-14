@@ -36,12 +36,14 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 void CAN_MsgReceived(CAN_HandleTypeDef *hcan, CAN_RxHeaderTypeDef *rxheader, uint8_t *rxdata) {
-	if (rxheader->StdId == 0x123) {
+	printf("CAN_MsgReceived\r\n");
+	if (rxheader->ExtId == 0x123) {
+		printf("Blinking LED!\r\n");
 		for (int i = 0; i < rxdata[0]; i++) {
+			printf("on\r\n");
 			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			HAL_Delay(200);
+			printf("off\r\n");
 			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			HAL_Delay(300);
 		}
 	}
 }
@@ -99,13 +101,12 @@ int __io_putchar(int ch) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t Pin) {
 	printf("BUTTON PRESSED\r\n");
-	CAN1_Tx.ExtId = 0;
+	CAN1_Tx.ExtId = 0x123;
 	CAN1_Tx.IDE = CAN_ID_EXT;
 	CAN1_Tx.RTR = CAN_RTR_DATA;
 	CAN1_Tx.TransmitGlobalTime = DISABLE;
 
 	CAN1_Tx.DLC = 1;
-	CAN1_Tx.StdId = 123;
 	CAN1_TxData[0]++;
 	uint32_t mb;
 	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &CAN1_Tx, CAN1_TxData, &mb);

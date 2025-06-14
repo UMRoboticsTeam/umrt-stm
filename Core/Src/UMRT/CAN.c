@@ -12,17 +12,10 @@
 #include "UMRT/CAN.h"
 #include <stdio.h>
 
-/**
- * This function must be defined elsewhere.
- * It will only be called in the case that there is no error.
- *
- * References are NOT guaranteed to exist after the call the CAN_Msg_Received ends.
- */
-void CAN_MsgReceived(CAN_HandleTypeDef *hcan, CAN_RxHeaderTypeDef *rxheader, uint8_t *rxdata);
 
 // Define all CAN callbacks for interrupts:
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan) {
-	printf("\r\n==== CAN ERROR INTERRUPT %08X\r\n", hcan->ErrorCode);
+	printf("\r\n==== CAN ERROR INTERRUPT %08lX\r\n", hcan->ErrorCode);
 	if ((hcan->ErrorCode&HAL_CAN_ERROR_EWG)==HAL_CAN_ERROR_EWG) printf("  -> has bit: Protocol Error Warning (HAL_CAN_ERROR_EWG)\r\n");
 	if ((hcan->ErrorCode&HAL_CAN_ERROR_EPV)==HAL_CAN_ERROR_EPV) printf("  -> has bit: Error Passive (HAL_CAN_ERROR_EPV)\r\n");
 	if ((hcan->ErrorCode&HAL_CAN_ERROR_BOF)==HAL_CAN_ERROR_BOF) printf("  -> has bit: Bus-off error (HAL_CAN_ERROR_BOF)\r\n");
@@ -54,7 +47,7 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan) {
 CAN_RxHeaderTypeDef rxheader[1];
 uint8_t rxdata[1][8];
 
-HAL_StatusTypeDef CAN_Transmit(CAN_HandleTypeDef *hcan, const CAN_TxHeaderTypeDef *pHeader, const uint8_t aData[], uint32_t *pTxMailbox);
+HAL_StatusTypeDef CAN_Transmit(const CAN_HandleTypeDef *hcan, const CAN_TxHeaderTypeDef *pHeader, const uint8_t aData[], uint32_t *pTxMailbox);
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 	printf("HAL_CAN_RxFifo0MsgPendingCallback\r\n");
@@ -64,7 +57,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 		return;
 	}
 
-	printf("  -> ID %lu\r\n", rxheader[0].StdId);
+	if (rxheader[0].IDE == CAN_ID_EXT) {
+		printf("  -> ID (ext) %lu\r\n", rxheader[0].ExtId);
+	} else {
+		printf("  -> ID (std) %lu\r\n", rxheader[0].StdId);
+	}
 	printf("  -> LENGTH %lu\r\n", rxheader[0].DLC);
 	printf("  -> DATA[0] %u\r\n", rxdata[0][0]);
 	printf("  -> DATA[1] %u\r\n", rxdata[0][1]);
