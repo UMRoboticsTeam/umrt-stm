@@ -58,19 +58,21 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 	}
 
 	if (rxheader[0].IDE == CAN_ID_EXT) {
-		printf("  -> ID (ext) %lu\r\n", rxheader[0].ExtId);
+		printf("  -> ID (ext) %lu (%08x)\r\n", rxheader[0].ExtId, rxheader[0].ExtId);
 	} else {
-		printf("  -> ID (std) %lu\r\n", rxheader[0].StdId);
+		printf("  -> ID (std) %lu (%03x)\r\n", rxheader[0].StdId, rxheader[0].StdId);
 	}
 	printf("  -> LENGTH %lu\r\n", rxheader[0].DLC);
-	printf("  -> DATA[0] %u\r\n", rxdata[0][0]);
-	printf("  -> DATA[1] %u\r\n", rxdata[0][1]);
-	printf("  -> DATA[2] %u\r\n", rxdata[0][2]);
-	printf("  -> DATA[3] %u\r\n", rxdata[0][3]);
-	printf("  -> DATA[4] %u\r\n", rxdata[0][4]);
-	printf("  -> DATA[5] %u\r\n", rxdata[0][5]);
-	printf("  -> DATA[6] %u\r\n", rxdata[0][6]);
-	printf("  -> DATA[7] %u\r\n", rxdata[0][7]);
+	printf("     DATA == (%02x%02x %02x%02x %02x%02x %02x%02x)\r\n",
+			rxdata[0][0], rxdata[0][1], rxdata[0][2], rxdata[0][3], rxdata[0][4], rxdata[0][5], rxdata[0][6], rxdata[0][7], rxdata[0][8]);
+	printf("  -> DATA[0] % 3u (%02x)\r\n", rxdata[0][0], rxdata[0][0]);
+	printf("  -> DATA[1] % 3u (%02x)\r\n", rxdata[0][1], rxdata[0][1]);
+	printf("  -> DATA[2] % 3u (%02x)\r\n", rxdata[0][2], rxdata[0][2]);
+	printf("  -> DATA[3] % 3u (%02x)\r\n", rxdata[0][3], rxdata[0][3]);
+	printf("  -> DATA[4] % 3u (%02x)\r\n", rxdata[0][4], rxdata[0][4]);
+	printf("  -> DATA[5] % 3u (%02x)\r\n", rxdata[0][5], rxdata[0][5]);
+	printf("  -> DATA[6] % 3u (%02x)\r\n", rxdata[0][6], rxdata[0][6]);
+	printf("  -> DATA[7] % 3u (%02x)\r\n", rxdata[0][7], rxdata[0][7]);
 
 	CAN_MsgReceived(hcan, &rxheader[0], rxdata[0]);
 }

@@ -35,16 +35,43 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+typedef struct {
+	int16_t motor1;
+	int16_t motor2;
+	int16_t motor3;
+	int16_t motor4;
+} MotorMessage;
+
+void PID_UpdateTargetSpeed_SOMEHOW(MotorMessage targetSpeed) {
+	// do nothing :)
+}
+
 void CAN_MsgReceived(CAN_HandleTypeDef *hcan, CAN_RxHeaderTypeDef *rxheader, uint8_t *rxdata) {
+	// For CAN IDs, try to stay in the range: 0xFF00-0xFFFF or 0x1FF00-0x1FFFF.
+	// This fits better in J1939 if we decide to move to that system.
 	printf("CAN_MsgReceived\r\n");
-	if (rxheader->ExtId == 0x123) {
-		printf("Blinking LED!\r\n");
-		for (int i = 0; i < rxdata[0]; i++) {
-			printf("on\r\n");
-			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			printf("off\r\n");
-			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-		}
+	switch (rxheader->ExtId) {
+	case 0xFF10: // Motor control
+		assert(rxheader->DLC == 8);
+		printf("Motor Message received!\r\n");
+
+		MotorMessage targetSpeed = {0};
+		targetSpeed.motor1 = ((int16_t*)rxdata)[0];
+		targetSpeed.motor2 = ((int16_t*)rxdata)[1];
+		targetSpeed.motor3 = ((int16_t*)rxdata)[2];
+		targetSpeed.motor4 = ((int16_t*)rxdata)[3];
+
+		printf("  --> targetSpeed.motor1 == %i (%04x)\r\n", targetSpeed.motor1, targetSpeed.motor1);
+		printf("  --> targetSpeed.motor2 == %i (%04x)\r\n", targetSpeed.motor2, targetSpeed.motor2);
+		printf("  --> targetSpeed.motor3 == %i (%04x)\r\n", targetSpeed.motor3, targetSpeed.motor3);
+		printf("  --> targetSpeed.motor4 == %i (%04x)\r\n", targetSpeed.motor4, targetSpeed.motor4);
+
+		PID_UpdateTargetSpeed_SOMEHOW(targetSpeed);
+
+		break;
+	case 0xFF40: // Headlights
+		printf("Headlights Message received!\r\n");
 	}
 }
 /* USER CODE END PD */
@@ -101,13 +128,17 @@ int __io_putchar(int ch) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t Pin) {
 	printf("BUTTON PRESSED\r\n");
-	CAN1_Tx.ExtId = 0x123;
+	CAN1_Tx.ExtId = 0xff10;
 	CAN1_Tx.IDE = CAN_ID_EXT;
 	CAN1_Tx.RTR = CAN_RTR_DATA;
 	CAN1_Tx.TransmitGlobalTime = DISABLE;
 
-	CAN1_Tx.DLC = 1;
-	CAN1_TxData[0]++;
+	CAN1_Tx.DLC = 8;
+	int16_t* dummy = CAN1_TxData;
+	dummy[0] += 1;
+	dummy[1] += 2;
+	dummy[2] += 3;
+	dummy[3] += 400;
 	uint32_t mb;
 	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &CAN1_Tx, CAN1_TxData, &mb);
 
